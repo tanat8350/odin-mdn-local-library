@@ -1,11 +1,15 @@
 const createError = require('http-errors');
 const express = require('express');
+const compression = require('compression');
+const helmet = require('helmet');
 
 // Set up mongoose connection
 const mongoose = require('mongoose');
 mongoose.set('strictQuery', false);
-const mongoDB =
+
+const dev_db_url =
   'mongodb+srv://admin:xd6AFFM7zg2mPv2H@cluster0.e3o84ak.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const mongoDB = process.env.MONGODB_URI || dev_db_url;
 
 main().catch((err) => console.log(err));
 async function main() {
@@ -22,6 +26,25 @@ const coolRouter = require('./routes/cool');
 const catalogRouter = require('./routes/catalog');
 
 const app = express();
+
+// Set up rate limiter: maximum of twenty requests per minute
+const RateLimit = require('express-rate-limit');
+const limiter = RateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 20,
+});
+// Apply rate limiter to all requests
+app.use(limiter);
+
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      'script-src': ["'self'", 'code.jquery.com', 'cdn.jsdelivr.net'],
+    },
+  })
+);
+
+app.use(compression());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
